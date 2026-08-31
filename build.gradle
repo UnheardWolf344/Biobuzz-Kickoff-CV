@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(11)
+    }
+}
+
+repositories {
+    mavenCentral()
+    google()
+    maven { url "https://maven.pkg.jetbrains.space/public/p/compose/dev" }
+}
+
+dependencies {
+    implementation 'org.deltacv.EOCV-Sim:Common:4.0.3'
+    implementation 'org.deltacv.EOCV-Sim:Vision:4.0.3'
+    implementation 'org.deltacv:AprilTagDesktop:2.1.0-D'
+	
+    implementation 'org.openpnp:opencv:4.7.0-0'
+}
