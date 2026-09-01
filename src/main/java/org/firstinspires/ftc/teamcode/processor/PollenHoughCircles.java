@@ -56,7 +56,7 @@ public class PollenHoughCircles extends OpenCvPipeline {
     static final int CONTOUR_LINE_THICKNESS = 2;
     static final int CB_CHAN_IDX = 2;
 
-    public Scalar params = new Scalar(4.0, 50, 200, 0.9);
+    public Scalar params = new Scalar(4.0, 25, 60, 0.8);
 
     public PollenHoughCircles(Telemetry telemetry) {
         this.telemetry = telemetry;
