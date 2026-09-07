@@ -21,30 +21,33 @@
 
 package org.firstinspires.ftc.teamcode.processor;
 
-import org.openftc.easyopencv.OpenCvPipeline;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-
 import org.opencv.imgproc.Imgproc;
+import org.openftc.easyopencv.OpenCvPipeline;
 
+/**
+ * Uses the Cb channel of a YCrCb image and Hough circle detection to find circular pollen
+ * targets. The viewport can toggle between the processed output and the extracted channel.
+ */
 public class PollenHoughCircles extends OpenCvPipeline {
     /*
-     * Our working image buffers
+     * These working buffers keep the source image and the extracted color channel available
+     * across frames without repeated allocation.
      */
     Mat cbMat = new Mat();
     Mat outputImg = new Mat();
 
-    private Telemetry telemetry = null;
+    private final Telemetry telemetry;
 
     Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_OPEN, new Size(6, 6));
 
     /*
-     * Colors
+     * Colors used to annotate detected regions in the output image.
      */
     static final Scalar TEAL = new Scalar(3, 148, 252);
     static final Scalar PURPLE = new Scalar(158, 52, 235);
@@ -55,6 +58,9 @@ public class PollenHoughCircles extends OpenCvPipeline {
     static final int CONTOUR_LINE_THICKNESS = 2;
     static final int CB_CHAN_IDX = 2;
 
+    /**
+     * Tunable Hough parameters: distance, edge threshold, accumulator threshold, and ratio.
+     */
     public Scalar params = new Scalar(4.0, 25, 60, 0.8);
 
     enum Stage {
@@ -64,23 +70,28 @@ public class PollenHoughCircles extends OpenCvPipeline {
 
     Stage[] stages = Stage.values();
 
-    // Keep track of what stage the viewport is showing
+    /**
+     * Tracks which image buffer is being shown in the viewport when the user taps the frame.
+     */
     int stageNum = 0;
 
-    // Constructor of the pipeline
+    /**
+     * Creates the pipeline and stores the telemetry used for live stage information.
+     */
     public PollenHoughCircles(Telemetry telemetry) {
         this.telemetry = telemetry;
     }
 
-    // When you tap the viewport, it toggles between the CB Channel and the output
-    // channel.
+    /**
+     * Cycles between the final processed output and the extracted Cb channel when the user
+     * taps the viewport.
+     */
     @Override
     public void onViewportTapped() {
         /*
-         * Note that this method is invoked from the UI thread
-         * so whatever we do here, we must do quickly.
+         * This callback runs on the UI thread, so it must stay short and not perform heavy
+         * image work.
          */
-
         int nextStageNum = stageNum + 1;
 
         if (nextStageNum >= stages.length) {
@@ -97,9 +108,9 @@ public class PollenHoughCircles extends OpenCvPipeline {
         findCircles(outputImg);
 
         /*
-         * Decide which buffer to send to the viewport
+         * Update the telemetry before returning the chosen buffer so the active stage is clear
+         * while debugging the threshold and circle detection.
          */
-
         telemetry.addData("Current Stage", stages[stageNum].name());
         telemetry.update();
 
@@ -113,8 +124,12 @@ public class PollenHoughCircles extends OpenCvPipeline {
         return input;
     }
 
+    /**
+     * Converts the incoming frame to YCrCb, extracts the Cb channel, and runs Hough circle
+     * detection on the filtered image.
+     */
     void findCircles(Mat input) {
-        // Convert the input image to YCrCb color space, then extract the Cb channel
+        // Convert the input image to YCrCb color space, then extract the Cb channel.
         Imgproc.cvtColor(input, cbMat, Imgproc.COLOR_RGB2YCrCb);
         Core.extractChannel(cbMat, cbMat, CB_CHAN_IDX);
 
@@ -127,9 +142,9 @@ public class PollenHoughCircles extends OpenCvPipeline {
         for (int x = 0; x < circles.cols(); x++) {
             double[] c = circles.get(0, x);
             Point center = new Point(Math.round(c[0]), Math.round(c[1]));
-            // circle center
+            // Draw the circle center marker.
             Imgproc.circle(outputImg, center, 1, new Scalar(0, 100, 100), (int) ((2 / 640.0) * outputImg.cols()), 8, 0);
-            // circle outline
+            // Draw the detected circle outline.
             int radius = (int) Math.round(c[2]);
             Imgproc.circle(outputImg, center, radius, new Scalar(255, 0, 255), 2, 8, 0);
         }
