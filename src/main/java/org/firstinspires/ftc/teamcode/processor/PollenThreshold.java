@@ -68,8 +68,8 @@ public class PollenThreshold implements VisionProcessor {
      * memory leak and causing the app to crash due to an
      * "Out of Memory" error.
      */
-    private Mat ycrcbMat       = new Mat();
-    private Mat binaryMat      = new Mat();
+    private Mat ycrcbMat = new Mat();
+    private Mat binaryMat = new Mat();
     private Mat maskedInputMat = new Mat();
 
     private Telemetry telemetry = null;
@@ -90,10 +90,10 @@ public class PollenThreshold implements VisionProcessor {
         YCrCb(Imgproc.COLOR_RGB2YCrCb),
         Lab(Imgproc.COLOR_RGB2Lab);
 
-        //store cvtCode in a public var
+        // store cvtCode in a public var
         public int cvtCode = 0;
 
-        //constructor to be used by enum declarations above
+        // constructor to be used by enum declarations above
         ColorSpace(int cvtCode) {
             this.cvtCode = cvtCode;
         }
@@ -174,7 +174,7 @@ public class PollenThreshold implements VisionProcessor {
     }
 
     @Override
-    public void onDrawFrame(Canvas canvas, int onscreenWidth, int onscreenHeight, float scaleBmpPxToCanvasPx, float scaleCanvasDensity, Object userContext) {
+    public void onDrawFrame(Canvas canvas, int onscreenWidth, int onscreenHeight, float scaleBmpPxToCanvasPx,
+            float scaleCanvasDensity, Object userContext) {
     }
 }
-

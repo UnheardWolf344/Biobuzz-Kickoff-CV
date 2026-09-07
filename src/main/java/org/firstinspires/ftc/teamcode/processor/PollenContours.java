@@ -24,7 +24,6 @@ package org.firstinspires.ftc.teamcode.processor;
 import org.openftc.easyopencv.OpenCvPipeline;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
-
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -59,9 +58,8 @@ public class PollenContours extends OpenCvPipeline {
      * The elements we use for noise reduction
      */
     Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_CROSS, new Size(8, 8));
-    Mat erodeToCircle = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(16,16));
-    Mat dilateElement = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(12,12));
-
+    Mat erodeToCircle = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(16, 16));
+    Mat dilateElement = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(12, 12));
 
     /*
      * Colors
@@ -82,8 +80,7 @@ public class PollenContours extends OpenCvPipeline {
     /*
      * Some stuff to handle returning our various buffers
      */
-    enum Stage
-    {
+    enum Stage {
         FINAL,
         Cb,
         MASK,
@@ -97,8 +94,7 @@ public class PollenContours extends OpenCvPipeline {
     int stageNum = 0;
 
     @Override
-    public void onViewportTapped()
-    {
+    public void onViewportTapped() {
         /*
          * Note that this method is invoked from the UI thread
          * so whatever we do here, we must do quickly.
@@ -106,8 +102,7 @@ public class PollenContours extends OpenCvPipeline {
 
         int nextStageNum = stageNum + 1;
 
-        if(nextStageNum >= stages.length)
-        {
+        if (nextStageNum >= stages.length) {
             nextStageNum = 0;
         }
 
@@ -115,44 +110,36 @@ public class PollenContours extends OpenCvPipeline {
     }
 
     @Override
-    public Mat processFrame(Mat input)
-    {
+    public Mat processFrame(Mat input) {
         input.copyTo(outputImg);
         /*
          * Run the image processing
          */
-        for(MatOfPoint contour : findContours(input))
-        {
+        for (MatOfPoint contour : findContours(input)) {
             analyzeContour(contour, input);
         }
 
         /*
          * Decide which buffer to send to the viewport
          */
-        switch (stages[stageNum])
-        {
-            case Cb:
-            {
+        switch (stages[stageNum]) {
+            case Cb: {
                 return cbMat;
             }
 
-            case FINAL:
-            {
+            case FINAL: {
                 return outputImg;
             }
 
-            case MASK:
-            {
+            case MASK: {
                 return thresholdMat;
             }
 
-            case MASK_NR:
-            {
+            case MASK_NR: {
                 return morphedThreshold;
             }
 
-            case CONTOURS:
-            {
+            case CONTOURS: {
                 return contoursOnPlainImageMat;
             }
         }
@@ -164,8 +151,7 @@ public class PollenContours extends OpenCvPipeline {
 
     }
 
-    ArrayList<MatOfPoint> findContours(Mat input)
-    {
+    ArrayList<MatOfPoint> findContours(Mat input) {
         // A list we'll be using to store the contours we find
         ArrayList<MatOfPoint> contoursList = new ArrayList<>();
 
@@ -178,7 +164,8 @@ public class PollenContours extends OpenCvPipeline {
         morphMask(thresholdMat, morphedThreshold);
 
         // Ok, now actually look for the contours! We only look for external contours.
-        Imgproc.findContours(morphedThreshold, contoursList, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_NONE);
+        Imgproc.findContours(morphedThreshold, contoursList, new Mat(), Imgproc.RETR_EXTERNAL,
+                Imgproc.CHAIN_APPROX_NONE);
 
         // We do draw the contours we find, but not to the main input buffer.
         input.copyTo(contoursOnPlainImageMat);
@@ -187,14 +174,13 @@ public class PollenContours extends OpenCvPipeline {
         return contoursList;
     }
 
-    void morphMask(Mat input, Mat output)
-    {
+    void morphMask(Mat input, Mat output) {
         /*
          * Apply some erosion and dilation for noise reduction
          */
 
         Imgproc.erode(input, output, erodeElement);
-        
+
         Imgproc.erode(output, output, erodeElement);
         Imgproc.erode(output, output, erodeElement);
 
@@ -204,24 +190,23 @@ public class PollenContours extends OpenCvPipeline {
 
         Imgproc.erode(output, output, erodeToCircle);
 
-
     }
 
-    void analyzeContour(MatOfPoint contour, Mat input)
-    {
+    void analyzeContour(MatOfPoint contour, Mat input) {
         MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
 
-        float[] radius = {0};
+        float[] radius = { 0 };
         Point center = new Point();
 
         Imgproc.minEnclosingCircle(contour2f, center, radius);
         drawCircle(center, radius[0], outputImg);
     }
 
-    static void drawCircle(Point center, float radius, Mat drawOn)
-    {
+    static void drawCircle(Point center, float radius, Mat drawOn) {
         Imgproc.circle(drawOn, center, (int) radius, BLUE, 2);
         Imgproc.circle(drawOn, center, 8, RED, -1);
-        Imgproc.putText(drawOn, String.format("Ctr: %.1f, %.1f", center.x, center.y), new Point(center.x + 15, center.y -15), Imgproc.FONT_HERSHEY_PLAIN, ( 2.0 / 640.0 ) * drawOn.cols(), new Scalar(0,0,0,0), (int) ((2.0 / 640.0) * drawOn.cols()));
+        Imgproc.putText(drawOn, String.format("Ctr: %.1f, %.1f", center.x, center.y),
+                new Point(center.x + 15, center.y - 15), Imgproc.FONT_HERSHEY_PLAIN, (2.0 / 640.0) * drawOn.cols(),
+                new Scalar(0, 0, 0, 0), (int) ((2.0 / 640.0) * drawOn.cols()));
     }
 }

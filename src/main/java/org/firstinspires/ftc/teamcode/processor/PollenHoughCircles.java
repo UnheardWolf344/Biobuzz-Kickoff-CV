@@ -43,7 +43,6 @@ public class PollenHoughCircles extends OpenCvPipeline {
 
     Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_OPEN, new Size(6, 6));
 
-
     /*
      * Colors
      */
@@ -58,15 +57,7 @@ public class PollenHoughCircles extends OpenCvPipeline {
 
     public Scalar params = new Scalar(4.0, 25, 60, 0.8);
 
-    public PollenHoughCircles(Telemetry telemetry) {
-        this.telemetry = telemetry;
-    }
-
-    /*
-     * Some stuff to handle returning our various buffers
-     */
-    enum Stage
-    {
+    enum Stage {
         FINAL,
         Cb,
     }
@@ -76,9 +67,15 @@ public class PollenHoughCircles extends OpenCvPipeline {
     // Keep track of what stage the viewport is showing
     int stageNum = 0;
 
+    // Constructor of the pipeline
+    public PollenHoughCircles(Telemetry telemetry) {
+        this.telemetry = telemetry;
+    }
+
+    // When you tap the viewport, it toggles between the CB Channel and the output
+    // channel.
     @Override
-    public void onViewportTapped()
-    {
+    public void onViewportTapped() {
         /*
          * Note that this method is invoked from the UI thread
          * so whatever we do here, we must do quickly.
@@ -86,8 +83,7 @@ public class PollenHoughCircles extends OpenCvPipeline {
 
         int nextStageNum = stageNum + 1;
 
-        if(nextStageNum >= stages.length)
-        {
+        if (nextStageNum >= stages.length) {
             nextStageNum = 0;
         }
 
@@ -95,61 +91,49 @@ public class PollenHoughCircles extends OpenCvPipeline {
     }
 
     @Override
-    public Mat processFrame(Mat input)
-    {
+    public Mat processFrame(Mat input) {
         input.copyTo(outputImg);
-        /*
-         * Run the image processing
-         */
-
 
         findCircles(outputImg);
+
         /*
          * Decide which buffer to send to the viewport
          */
+
         telemetry.addData("Current Stage", stages[stageNum].name());
         telemetry.update();
-        switch (stages[stageNum])
-        {
+
+        switch (stages[stageNum]) {
             case FINAL:
-            {
                 return outputImg;
-            }
             case Cb:
-            {
                 return cbMat;
-            }
         }
 
-
         return input;
-
     }
 
-    void findCircles(Mat input)
-    {
+    void findCircles(Mat input) {
         // Convert the input image to YCrCb color space, then extract the Cb channel
         Imgproc.cvtColor(input, cbMat, Imgproc.COLOR_RGB2YCrCb);
         Core.extractChannel(cbMat, cbMat, CB_CHAN_IDX);
-        // Imgproc.erode(cbMat, cbMat, erodeElement);
 
-        // Imgproc.blur(cbMat,cbMat, new Size(5,5));
         Imgproc.medianBlur(cbMat, cbMat, 5);
         Mat circles = new Mat();
 
-        Imgproc.HoughCircles(cbMat, circles, Imgproc.HOUGH_GRADIENT_ALT, params.val[0], params.val[1], params.val[2], params.val[3], 20);
+        Imgproc.HoughCircles(cbMat, circles, Imgproc.HOUGH_GRADIENT_ALT, params.val[0], params.val[1], params.val[2],
+                params.val[3], 20);
 
         for (int x = 0; x < circles.cols(); x++) {
             double[] c = circles.get(0, x);
             Point center = new Point(Math.round(c[0]), Math.round(c[1]));
             // circle center
-            Imgproc.circle(outputImg, center, 1, new Scalar(0,100,100), (int) ((2/640.0)*outputImg.cols()), 8, 0 );
+            Imgproc.circle(outputImg, center, 1, new Scalar(0, 100, 100), (int) ((2 / 640.0) * outputImg.cols()), 8, 0);
             // circle outline
             int radius = (int) Math.round(c[2]);
-            Imgproc.circle(outputImg, center, radius, new Scalar(255,0,255), 2, 8, 0 );
+            Imgproc.circle(outputImg, center, radius, new Scalar(255, 0, 255), 2, 8, 0);
         }
 
         circles.release();
-
     }
 }
