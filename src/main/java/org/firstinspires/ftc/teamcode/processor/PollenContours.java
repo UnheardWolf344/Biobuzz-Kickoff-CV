@@ -35,12 +35,15 @@ import org.opencv.imgproc.Imgproc;
 import org.openftc.easyopencv.OpenCvPipeline;
 
 /**
- * Detects and annotates contours in the Cb channel of the image. The pipeline isolates the
- * pollen color, removes small noise, and draws the contour and center point for debugging.
+ * Detects and annotates contours in the Cb channel of the image. The pipeline
+ * isolates the
+ * pollen color, removes small noise, and draws the contour and center point for
+ * debugging.
  */
 public class PollenContours extends OpenCvPipeline {
     /*
-     * Working image buffers reused across frames to reduce allocation churn during live image
+     * Working image buffers reused across frames to reduce allocation churn during
+     * live image
      * processing.
      */
     Mat cbMat = new Mat();
@@ -52,14 +55,16 @@ public class PollenContours extends OpenCvPipeline {
     private final Telemetry telemetry;
 
     /*
-     * Threshold settings for the Cb channel, which is used to isolate the target color.
+     * Threshold settings for the Cb channel, which is used to isolate the target
+     * color.
      */
     public static int CB_MAX_THRESHOLD = 255;
     public static int CB_MIN_THRESHOLD = 102;
     static final double DENSITY_UPRIGHT_THRESHOLD = 0.03;
 
     /*
-     * Morphological kernels used to clean up the binary mask before contour detection.
+     * Morphological kernels used to clean up the binary mask before contour
+     * detection.
      */
     Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_CROSS, new Size(8, 8));
     Mat erodeToCircle = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(16, 16));
@@ -78,21 +83,23 @@ public class PollenContours extends OpenCvPipeline {
     static final int CB_CHAN_IDX = 2;
 
     /**
-     * Creates the pipeline and stores the telemetry used to report the active debug stage.
+     * Creates the pipeline and stores the telemetry used to report the active debug
+     * stage.
      */
     public PollenContours(Telemetry telemetry) {
-       this.telemetry = telemetry;
+        this.telemetry = telemetry;
     }
 
     /*
-     * These stages let the user inspect the intermediate image buffers during debugging.
+     * These stages let the user inspect the intermediate image buffers during
+     * debugging.
      */
     enum Stage {
-       FINAL,
-       Cb,
-       MASK,
-       MASK_NR,
-       CONTOURS;
+        FINAL,
+        Cb,
+        MASK,
+        MASK_NR,
+        CONTOURS;
     }
 
     Stage[] stages = Stage.values();
@@ -104,125 +111,130 @@ public class PollenContours extends OpenCvPipeline {
 
     @Override
     public void onViewportTapped() {
-       /*
-        * This callback runs on the UI thread, so the work needs to stay minimal and quick.
-        */
-       int nextStageNum = stageNum + 1;
+        /*
+         * This callback runs on the UI thread, so the work needs to stay minimal and
+         * quick.
+         */
+        int nextStageNum = stageNum + 1;
 
-       if (nextStageNum >= stages.length) {
-           nextStageNum = 0;
-       }
+        if (nextStageNum >= stages.length) {
+            nextStageNum = 0;
+        }
 
-       stageNum = nextStageNum;
+        stageNum = nextStageNum;
     }
 
     @Override
     public Mat processFrame(Mat input) {
-       input.copyTo(outputImg);
+        input.copyTo(outputImg);
 
-       /*
-        * Detect contours in the filtered image and draw their centers on the output buffer.
-        */
-       for (MatOfPoint contour : findContours(input)) {
-           analyzeContour(contour, input);
-       }
+        /*
+         * Detect contours in the filtered image and draw their centers on the output
+         * buffer.
+         */
+        for (MatOfPoint contour : findContours(input)) {
+            analyzeContour(contour, input);
+        }
 
-       /*
-        * Return the requested debug buffer for the selected stage so the viewport can be used
-        * to inspect the threshold, filtered mask, or contour overlay.
-        */
-       switch (stages[stageNum]) {
-           case Cb: {
-               return cbMat;
-           }
+        /*
+         * Return the requested debug buffer for the selected stage so the viewport can
+         * be used
+         * to inspect the threshold, filtered mask, or contour overlay.
+         */
+        switch (stages[stageNum]) {
+            case Cb:
+                return cbMat;
 
-           case FINAL: {
-               return outputImg;
-           }
+            case FINAL:
+                return outputImg;
 
-           case MASK: {
-               return thresholdMat;
-           }
+            case MASK:
+                return thresholdMat;
 
-           case MASK_NR: {
-               return morphedThreshold;
-           }
+            case MASK_NR:
+                return morphedThreshold;
 
-           case CONTOURS: {
-               return contoursOnPlainImageMat;
-           }
-       }
+            case CONTOURS:
+                return contoursOnPlainImageMat;
 
-       telemetry.addData("Current Stage", stages[stageNum].name());
-       telemetry.update();
+        }
 
-       return input;
+        telemetry.addData("Current Stage", stages[stageNum].name());
+        telemetry.update();
+
+        return input;
     }
 
     /**
-     * Converts the image to YCrCb, extracts the Cb channel, thresholds it to form a mask, and
+     * Converts the image to YCrCb, extracts the Cb channel, thresholds it to form a
+     * mask, and
      * searches for external contours in the cleaned binary image.
      */
     ArrayList<MatOfPoint> findContours(Mat input) {
-       ArrayList<MatOfPoint> contoursList = new ArrayList<>();
+        ArrayList<MatOfPoint> contoursList = new ArrayList<>();
 
-       // Convert the input image to YCrCb color space, then extract the Cb channel.
-       Imgproc.cvtColor(input, cbMat, Imgproc.COLOR_RGB2YCrCb);
-       Core.extractChannel(cbMat, cbMat, CB_CHAN_IDX);
+        // Convert the input image to YCrCb color space, then extract the Cb channel.
+        Imgproc.cvtColor(input, cbMat, Imgproc.COLOR_RGB2YCrCb);
+        Core.extractChannel(cbMat, cbMat, CB_CHAN_IDX);
 
-       // Threshold the Cb channel to form a mask, then run some noise reduction.
-       Imgproc.threshold(cbMat, thresholdMat, CB_MIN_THRESHOLD, CB_MAX_THRESHOLD, Imgproc.THRESH_BINARY_INV);
-       morphMask(thresholdMat, morphedThreshold);
+        // Threshold the Cb channel to form a mask, then run some noise reduction.
+        Imgproc.threshold(cbMat, thresholdMat, CB_MIN_THRESHOLD, CB_MAX_THRESHOLD, Imgproc.THRESH_BINARY_INV);
+        morphMask(thresholdMat, morphedThreshold);
 
-       // Search for external contours only, which keeps the detection focused on real target
-       // regions instead of nested internal edges.
-       Imgproc.findContours(morphedThreshold, contoursList, new Mat(), Imgproc.RETR_EXTERNAL,
-               Imgproc.CHAIN_APPROX_NONE);
+        // Search for external contours only, which keeps the detection focused on real
+        // target
+        // regions instead of nested internal edges.
+        Imgproc.findContours(morphedThreshold, contoursList, new Mat(), Imgproc.RETR_EXTERNAL,
+                Imgproc.CHAIN_APPROX_NONE);
 
-       // Copy the original frame to a dedicated overlay buffer so contour outlines can be drawn
-       // without modifying the source image used for the next pass.
-       input.copyTo(contoursOnPlainImageMat);
-       Imgproc.drawContours(contoursOnPlainImageMat, contoursList, -1, BLUE, CONTOUR_LINE_THICKNESS, 8);
+        // Copy the original frame to a dedicated overlay buffer so contour outlines can
+        // be drawn
+        // without modifying the source image used for the next pass.
+        input.copyTo(contoursOnPlainImageMat);
+        Imgproc.drawContours(contoursOnPlainImageMat, contoursList, -1, BLUE, CONTOUR_LINE_THICKNESS, 8);
 
-       return contoursList;
+        return contoursList;
     }
 
     /**
-     * Erodes and dilates the mask to remove noise while preserving the main target shape.
+     * Erodes and dilates the mask to remove noise while preserving the main target
+     * shape.
      */
     void morphMask(Mat input, Mat output) {
-       Imgproc.erode(input, output, erodeElement);
-       Imgproc.erode(output, output, erodeElement);
-       Imgproc.erode(output, output, erodeElement);
+        Imgproc.erode(input, output, erodeElement);
+        Imgproc.erode(output, output, erodeElement);
+        Imgproc.erode(output, output, erodeElement);
 
-       Imgproc.dilate(output, output, dilateElement);
-       Imgproc.dilate(output, output, dilateElement);
-       Imgproc.dilate(output, output, dilateElement);
+        Imgproc.dilate(output, output, dilateElement);
+        Imgproc.dilate(output, output, dilateElement);
+        Imgproc.dilate(output, output, dilateElement);
 
-       Imgproc.erode(output, output, erodeToCircle);
+        Imgproc.erode(output, output, erodeToCircle);
     }
 
     /**
-     * Determines the minimum enclosing circle for a contour and draws it on the output image.
+     * Determines the minimum enclosing circle for a contour and draws it on the
+     * output image.
      */
     void analyzeContour(MatOfPoint contour, Mat input) {
-       MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+        MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
 
-       float[] radius = { 0 };
-       Point center = new Point();
+        float[] radius = { 0 };
+        Point center = new Point();
 
-       Imgproc.minEnclosingCircle(contour2f, center, radius);
-       drawCircle(center, radius[0], outputImg);
+        Imgproc.minEnclosingCircle(contour2f, center, radius);
+        drawCircle(center, radius[0], outputImg);
     }
 
     /**
-     * Draws a circle and label to help visualize the contour center during debugging.
+     * Draws a circle and label to help visualize the contour center during
+     * debugging.
      */
     static void drawCircle(Point center, float radius, Mat drawOn) {
-       Imgproc.circle(drawOn, center, (int) radius, BLUE, 2);
-       Imgproc.circle(drawOn, center, 8, RED, -1);
-       Imgproc.putText(drawOn, String.format("Ctr: %.1f, %.1f", center.x, center.y),
-               new Point(center.x + 15, center.y - 15), Imgproc.FONT_HERSHEY_PLAIN, (2.0 / 640.0) * drawOn.cols(),
-               new Scalar(0, 0, 0, 0), (int) ((2.0 / 640.0) * drawOn.cols()));
+        Imgproc.circle(drawOn, center, (int) radius, BLUE, 2);
+        Imgproc.circle(drawOn, center, 8, RED, -1);
+        Imgproc.putText(drawOn, String.format("Ctr: %.1f, %.1f", center.x, center.y),
+                new Point(center.x + 15, center.y - 15), Imgproc.FONT_HERSHEY_PLAIN, (2.0 / 640.0) * drawOn.cols(),
+                new Scalar(0, 0, 0, 0), (int) ((2.0 / 640.0) * drawOn.cols()));
     }
 }
