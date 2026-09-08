@@ -22,6 +22,9 @@
 package org.firstinspires.ftc.teamcode.processor;
 
 import org.openftc.easyopencv.OpenCvPipeline;
+
+import java.util.ArrayList;
+
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import org.opencv.core.Core;
@@ -33,6 +36,18 @@ import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 public class PollenHoughCircles extends OpenCvPipeline {
+    class Pollen {
+        double x;
+        double y;
+        double r;
+
+        public Pollen (double x, double y, double r) {
+            this.x = x;
+            this.y = y;
+            this.r = r;
+        }
+    }
+
     /*
      * Our working image buffers
      */
@@ -43,6 +58,7 @@ public class PollenHoughCircles extends OpenCvPipeline {
 
     Mat erodeElement = Imgproc.getStructuringElement(Imgproc.MORPH_OPEN, new Size(6, 6));
 
+    public ArrayList<Pollen> pollenList = new ArrayList<>();
 
     /*
      * Colors
@@ -139,6 +155,7 @@ public class PollenHoughCircles extends OpenCvPipeline {
 
         Imgproc.HoughCircles(cbMat, circles, Imgproc.HOUGH_GRADIENT_ALT, params.val[0], params.val[1], params.val[2], params.val[3], 20);
 
+        pollenList.clear();
         for (int x = 0; x < circles.cols(); x++) {
             double[] c = circles.get(0, x);
             Point center = new Point(Math.round(c[0]), Math.round(c[1]));
@@ -147,6 +164,8 @@ public class PollenHoughCircles extends OpenCvPipeline {
             // circle outline
             int radius = (int) Math.round(c[2]);
             Imgproc.circle(outputImg, center, radius, new Scalar(255,0,255), 2, 8, 0 );
+
+            pollenList.add(new Pollen(center.x, center.y, (double) radius));
         }
 
         circles.release();
