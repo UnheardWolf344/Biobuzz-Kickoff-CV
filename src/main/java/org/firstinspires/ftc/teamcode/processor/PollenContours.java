@@ -182,14 +182,12 @@ public class PollenContours extends OpenCvPipeline {
         morphMask(thresholdMat, morphedThreshold);
 
         // Search for external contours only, which keeps the detection focused on real
-        // target
-        // regions instead of nested internal edges.
+        // target regions instead of nested internal edges.
         Imgproc.findContours(morphedThreshold, contoursList, new Mat(), Imgproc.RETR_EXTERNAL,
                 Imgproc.CHAIN_APPROX_NONE);
 
         // Copy the original frame to a dedicated overlay buffer so contour outlines can
-        // be drawn
-        // without modifying the source image used for the next pass.
+        // be drawn without modifying the source image used for the next pass.
         input.copyTo(contoursOnPlainImageMat);
         Imgproc.drawContours(contoursOnPlainImageMat, contoursList, -1, BLUE, CONTOUR_LINE_THICKNESS, 8);
 

@@ -37,7 +37,7 @@ import org.opencv.imgproc.Imgproc;
  * Uses the Cb channel of a YCrCb image and Hough circle detection to find circular pollen
  * targets. The viewport can toggle between the processed output and the extracted channel.
  */
-public class PollenHoughCircles extends OpenCvPipeline {
+public class PollenCanny extends OpenCvPipeline {
     class Pollen {
         double x;
         double y;
@@ -56,6 +56,7 @@ public class PollenHoughCircles extends OpenCvPipeline {
      */
     Mat cbMat = new Mat();
     Mat outputImg = new Mat();
+    Mat canny = new Mat();
 
     private final Telemetry telemetry;
 
@@ -79,10 +80,12 @@ public class PollenHoughCircles extends OpenCvPipeline {
      * Tunable Hough parameters: distance, edge threshold, accumulator threshold, and ratio.
      */
     public Scalar params = new Scalar(4.0, 25, 60, 0.8);
+    public Scalar param1 = new Scalar(150.0, 40.0);
 
     enum Stage {
         FINAL,
         Cb,
+        Canny,
     }
 
     Stage[] stages = Stage.values();
@@ -95,7 +98,7 @@ public class PollenHoughCircles extends OpenCvPipeline {
     /**
      * Creates the pipeline and stores the telemetry used for live stage information.
      */
-    public PollenHoughCircles(Telemetry telemetry) {
+    public PollenCanny(Telemetry telemetry) {
         this.telemetry = telemetry;
     }
 
@@ -136,6 +139,10 @@ public class PollenHoughCircles extends OpenCvPipeline {
                 return outputImg;
             case Cb:
                 return cbMat;
+                
+
+            case Canny:
+                return canny;
         }
 
         return input;
@@ -150,13 +157,19 @@ public class PollenHoughCircles extends OpenCvPipeline {
         Imgproc.cvtColor(input, cbMat, Imgproc.COLOR_RGB2YCrCb);
         Core.extractChannel(cbMat, cbMat, CB_CHAN_IDX);
 
-        Imgproc.medianBlur(cbMat, cbMat, 5);
+        Imgproc.Canny(input, canny, param1.val[0], param1.val[1]);
+        Imgproc.Canny(canny, canny, param1.val[0], param1.val[1]);
+
+
+        // Imgproc.medianBlur(cbMat, cbMat, 5); 
+
         Mat circles = new Mat();
 
-        Imgproc.HoughCircles(cbMat, circles, Imgproc.HOUGH_GRADIENT_ALT, params.val[0], params.val[1], params.val[2],
-                params.val[3], 20);
+        Imgproc.HoughCircles(canny, circles, Imgproc.HOUGH_GRADIENT, params.val[0], params.val[1], params.val[2],
+                params.val[3], 5);
 
         pollenList.clear();
+
         for (int x = 0; x < circles.cols(); x++) {
             double[] c = circles.get(0, x);
             Point center = new Point(Math.round(c[0]), Math.round(c[1]));
